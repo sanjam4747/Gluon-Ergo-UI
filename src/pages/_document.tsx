@@ -3,6 +3,14 @@ import { tokenConfig } from "@/config/tokenConfig";
 import { tokenThemeCssVariables } from "@/config/tokenConfig";
 
 export default function Document() {
+  const toLocalAssetHref = (assetPath: string): string => {
+    if (!assetPath || assetPath.startsWith("http://") || assetPath.startsWith("https://") || assetPath.startsWith("data:")) {
+      return assetPath;
+    }
+
+    return assetPath.replace(/^\/+/, "");
+  };
+
   return (
     // Inline styles on <html> set CSS variables at the highest possible
     // specificity — they override any stylesheet (including globals.css)
@@ -19,10 +27,10 @@ export default function Document() {
         <link rel="canonical" href="https://gluon.fi" />
 
         {/* Manifest */}
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="manifest.json" />
 
         {/* Apple Touch Icon */}
-        <link rel="apple-touch-icon" href={tokenConfig.favicon} />
+        <link rel="apple-touch-icon" href={toLocalAssetHref(tokenConfig.favicon)} />
       </Head>
       <body className="antialiased">
         <Main />
