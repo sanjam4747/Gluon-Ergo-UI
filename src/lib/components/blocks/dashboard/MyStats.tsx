@@ -13,9 +13,6 @@ import ErgIcon from "@/lib/components/icons/ErgIcon";
 import NeutronIcon from "@/lib/components/icons/NeutronIcon";
 import ProtonIcon from "@/lib/components/icons/ProtonIcon";
 import { tokenConfig } from "@/config/tokenConfig";
-// Legacy imports for backward compatibility
-import GauIcon from "@/lib/components/icons/NeutronIcon";
-import GaucIcon from "@/lib/components/icons/ProtonIcon";
 
 interface WalletStats {
   ergBalance: string;
@@ -66,7 +63,7 @@ export function MyStats() {
             json: () => ({ price: null }),
           })),
           getBalance(),
-          import("gluon-gold-sdk"),
+          import("gluon-ergo-sdk"),
         ]);
 
         const { price: ergPrice } = await ergPriceRes.json();
@@ -74,8 +71,10 @@ export function MyStats() {
         // Get protocol prices for stable/volatile assets
         const gluon = new sdk.Gluon();
         gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT || "testnet";
-        const gluonBox = await gluon.getGluonBox();
-        const oracleBox = await gluon.getGoldOracleBox();
+        const [gluonBox, oracleBox] = await Promise.all([
+          gluon.getGluonBox(),
+          gluon.getOracleBox(),
+        ]);
 
         const [gaucPrice, goldKgPrice] = await Promise.all([gluonBox.protonPrice(oracleBox), oracleBox.getPrice()]);
 
