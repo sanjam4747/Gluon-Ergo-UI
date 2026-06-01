@@ -3,6 +3,18 @@ import { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["gluon-ergo-sdk"],
+
+  // Prevent Next.js from bundling the Node.js WASM package server-side.
+  // When bundled, webpack copies the .wasm to a chunk path that doesn't
+  // exist at Vercel runtime. Marking it external makes Node require() it
+  // directly from node_modules, where the .wasm sits beside the .js glue.
+  serverExternalPackages: ["ergo-lib-wasm-nodejs"],
+
+  // Ensure the .wasm binary is included in Vercel's output file tracing.
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/ergo-lib-wasm-nodejs/**/*.wasm"],
+  },
+
   async headers() {
     const isDev = process.env.NODE_ENV !== "production";
 
