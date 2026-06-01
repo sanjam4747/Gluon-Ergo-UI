@@ -19,6 +19,7 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
+import { createGluonInstance, isGluonDollar } from "@/lib/constants/sdkConfig";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -135,9 +136,7 @@ export function ReserveRatioChart() {
 
     async function fetchRatio() {
       try {
-        const sdk = await import("gluon-ergo-sdk");
-        const gluon = new sdk.Gluon();
-        gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT || "testnet";
+        const gluon = await createGluonInstance();
         const [gluonBox, oracleBox] = await Promise.all([
           gluon.getGluonBox(),
           gluon.getOracleBox(),
@@ -154,18 +153,21 @@ export function ReserveRatioChart() {
 
         // Both bigint operands must be converted to Number before multiplication
         // to avoid precision loss and match GluonStats.tsx exactly.
+        // reserveRatio% = tvl × 1e11 × pegPriceDivisor / (circNeutrons × rawOraclePrice)
+        // Gold (pegPriceDivisor=1000) → 1e14 / rawPrice  |  Dollar (pegPriceDivisor=1) → 1e11 / rawPrice
+        const pegPriceDivisor = isGluonDollar() ? 1 : 1000;
         const tvlNum = Number(tvl);
         const circNeutronsNum = Number(circNeutrons);
-        const goldPriceNum = Number(goldPrice);
+        const rawOraclePrice = Number(goldPrice);
 
         if (
           !mounted ||
           tvlNum === 0 ||
           circNeutronsNum === 0 ||
-          goldPriceNum === 0
+          rawOraclePrice === 0
         ) return;
 
-        const ratio = (tvlNum * 1e14) / (circNeutronsNum * goldPriceNum);
+        const ratio = (tvlNum * 1e11 * pegPriceDivisor) / (circNeutronsNum * rawOraclePrice);
         if (isNaN(ratio) || !isFinite(ratio)) return;
 
         setCurrentRatio(ratio);

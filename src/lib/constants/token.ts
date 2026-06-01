@@ -1,14 +1,19 @@
 import { tokenConfig } from "@/config/tokenConfig";
+import { getProtocolTokenIds } from "@/lib/constants/sdkConfig";
+
+// Token IDs are resolved at module load time from the correct protocol constants
+// (GLUON_GOLD or GLUON_DOLLAR) depending on NEXT_PUBLIC_PROTOCOL_NAME.
+const _ids = getProtocolTokenIds();
 
 export const TOKEN_ADDRESS = {
   decimals: 9,
   // Stable asset (Neutron) token address
-  stableAsset: "886b7721bef42f60c6317d37d8752da8aca01898cae7dae61808c4a14225edc8",
+  stableAsset: _ids.stableAsset,
   // Volatile asset (Proton) token address
-  volatileAsset: "9944ff273ff169f32b851b96bbecdbb67f223101c15ae143de82b3e7f75b19d2",
-  // Legacy keys for backward compatibility (will be removed)
-  gau: "886b7721bef42f60c6317d37d8752da8aca01898cae7dae61808c4a14225edc8",
-  gauc: "9944ff273ff169f32b851b96bbecdbb67f223101c15ae143de82b3e7f75b19d2",
+  volatileAsset: _ids.volatileAsset,
+  // Legacy keys for backward compatibility
+  gau: _ids.gau,
+  gauc: _ids.gauc,
 };
 
 // Protocol-driven action type keys to support dynamic peg assets

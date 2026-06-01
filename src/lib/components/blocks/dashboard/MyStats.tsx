@@ -13,6 +13,7 @@ import ErgIcon from "@/lib/components/icons/ErgIcon";
 import NeutronIcon from "@/lib/components/icons/NeutronIcon";
 import ProtonIcon from "@/lib/components/icons/ProtonIcon";
 import { tokenConfig } from "@/config/tokenConfig";
+import { createGluonInstance, isGluonDollar } from "@/lib/constants/sdkConfig";
 
 interface WalletStats {
   ergBalance: string;
@@ -58,19 +59,17 @@ export function MyStats() {
 
       try {
         // Fetch ERG price, wallet balances, and protocol prices in parallel
-        const [ergPriceRes, balances, sdk] = await Promise.all([
+        const [ergPriceRes, balances, gluon] = await Promise.all([
           fetch("/api/getErgPrice").catch(() => ({
             json: () => ({ price: null }),
           })),
           getBalance(),
-          import("gluon-ergo-sdk"),
+          createGluonInstance(),
         ]);
 
         const { price: ergPrice } = await ergPriceRes.json();
 
         // Get protocol prices for stable/volatile assets
-        const gluon = new sdk.Gluon();
-        gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT || "testnet";
         const [gluonBox, oracleBox] = await Promise.all([
           gluon.getGluonBox(),
           gluon.getOracleBox(),
@@ -79,9 +78,12 @@ export function MyStats() {
         const [gaucPrice, goldKgPrice] = await Promise.all([gluonBox.protonPrice(oracleBox), oracleBox.getPrice()]);
 
         // Convert protocol prices to ERG
+        // Gold oracle: raw price is nanoERG/kg → divide by 1000 to get nanoERG/gram
+        // Dollar oracle: raw price is nanoERG/USD → no division needed
+        const pegPriceDivisor = isGluonDollar() ? 1 : 1000;
         const gaucPriceERG = nanoErgsToErgs(gaucPrice);
-        const goldKgPriceERG = nanoErgsToErgs(goldKgPrice);
-        const gauPriceERG = goldKgPriceERG.dividedBy(1000); // Convert kg to gram
+        const rawPegPriceERG = nanoErgsToErgs(goldKgPrice);
+        const gauPriceERG = rawPegPriceERG.dividedBy(pegPriceDivisor);
 
         // Process wallet balances
         const ergBalanceData = balances.find((b: any) => b.tokenId === "ERG" || !b.tokenId);

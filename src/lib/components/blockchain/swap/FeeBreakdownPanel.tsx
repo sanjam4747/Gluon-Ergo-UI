@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createGluonInstance } from "@/lib/constants/sdkConfig";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -76,9 +77,7 @@ export function FeeBreakdownPanel({
 
     const timer = setTimeout(async () => {
       try {
-        const sdk = await import("gluon-ergo-sdk");
-        const gluon = new sdk.Gluon();
-        gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT || "testnet";
+        const gluon = await createGluonInstance();
 
         const gluonBox = await gluon.getGluonBox();
         const amountNano = Math.round(amountERG * 1e9);

@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/lib/components/ui/tooltip";
+import { createGluonInstance } from "@/lib/constants/sdkConfig";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -156,9 +157,7 @@ export function ProtonAPYBadge() {
 
     async function poll() {
       try {
-        const sdk = await import("gluon-ergo-sdk");
-        const gluon = new sdk.Gluon();
-        gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT || "testnet";
+        const gluon = await createGluonInstance();
         const [gluonBox, oracleBox] = await Promise.all([
           gluon.getGluonBox(),
           gluon.getOracleBox(),

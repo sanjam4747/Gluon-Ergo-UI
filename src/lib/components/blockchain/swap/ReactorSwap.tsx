@@ -28,6 +28,7 @@ import ProtonIcon from "@/lib/components/icons/ProtonIcon";
 import NeutronProtonIcon from "@/lib/components/icons/NeutronProtonIcon";
 import { tokenConfig } from "@/config/tokenConfig";
 import { motion, AnimatePresence } from "framer-motion";
+import { createGluonInstance } from "@/lib/constants/sdkConfig";
 
 const formatTokenAmount = (value: number | string): string => {
   const numValue = typeof value === "string" ? parseFloat(value) : value;
@@ -435,9 +436,7 @@ export function ReactorSwap() {
       setBoxesReady(false);
       setInitError(null);
       try {
-        const sdk = await import("gluon-ergo-sdk");
-        const gluon = new sdk.Gluon();
-        gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT || "testnet";
+        const gluon = await createGluonInstance();
         setGluonInstance(gluon);
         const [gBox, oBox] = await Promise.all([
           gluon.getGluonBox(),

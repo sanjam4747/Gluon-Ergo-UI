@@ -14,6 +14,7 @@ import NeutronIcon from "@/lib/components/icons/NeutronIcon";
 import ProtonIcon from "@/lib/components/icons/ProtonIcon";
 import { tokenConfig } from "@/config/tokenConfig";
 import { VolumeChart } from "@/lib/components/blocks/dashboard/VolumeChart";
+import { createGluonInstance, isGluonDollar } from "@/lib/constants/sdkConfig";
 
 interface GluonStats {
   ergPrice: number | null;
@@ -75,11 +76,9 @@ export function GluonStats() {
     async function fetchStats() {
       try {
         setHasError(false);
-        const [ergPriceRes, sdk] = await Promise.all([fetch("/api/getErgPrice"), import("gluon-ergo-sdk")]);
+        const [ergPriceRes, gluon] = await Promise.all([fetch("/api/getErgPrice"), createGluonInstance()]);
 
         const { price: ergPrice } = await ergPriceRes.json();
-        const gluon = new sdk.Gluon();
-        gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT || "testnet";
         const [gluonBox, oracleBox] = await Promise.all([
           gluon.getGluonBox(),
           gluon.getOracleBox(),
@@ -120,12 +119,20 @@ export function GluonStats() {
         const volumeArrays = { protonsToNeutrons: volArrayPN, neutronsToProtons: volArrayNP };
 
         // Convert values to proper format
-        const goldPriceBN = nanoErgsToErgs(goldPrice).dividedBy(1000);
+        // Gold oracle reports nanoERG per kg  → divide by 1000 to get per gram
+        // Dollar oracle reports nanoERG per 1 USD → no division needed
+        const pegPriceDivisor = isGluonDollar() ? 1 : 1000;
+        const goldPriceBN = nanoErgsToErgs(goldPrice).dividedBy(pegPriceDivisor);
         const gaucPriceBN = nanoErgsToErgs(gaucPrice);
         const tvlBN = nanoErgsToErgs(tvl);
         const gauPriceBN = tvlBN.minus(convertFromDecimals(circProtons).multipliedBy(gaucPriceBN)).dividedBy(convertFromDecimals(circNeutrons));
         const fusionRatioBN = BigNumber(Math.round(10000 / normalizedReserveRatio));
-        const reserveRatioBN = BigNumber(+BigNumber(tvl) * 1e14 / (+BigNumber(circNeutrons) * goldPrice));
+        // reserveRatio% = 100 × (tvl_ERG) / (circNeutrons_tokens × oraclePrice_ERG_per_token)
+        //   = 100 × (tvl/1e9) / ((circNeutrons/1e9) × (rawOraclePrice / (pegPriceDivisor × 1e9)))
+        //   = tvl × 1e11 × pegPriceDivisor / (circNeutrons × rawOraclePrice)
+        // For Gold (pegPriceDivisor=1000): → tvl × 1e14 / (circNeutrons × rawPrice)  [original]
+        // For Dollar (pegPriceDivisor=1):  → tvl × 1e11 / (circNeutrons × rawPrice)
+        const reserveRatioBN = BigNumber(+BigNumber(tvl) * 1e11 * pegPriceDivisor / (+BigNumber(circNeutrons) * goldPrice));
         const priceCrashCushionBN = BigNumber(Math.max(0, 100 * (+reserveRatioBN - 100 / 0.66) / +reserveRatioBN));
         const gaucLeverageBN = BigNumber(Math.round(- (100 / (100 - normalizedReserveRatio)) * 100) / 100);
 
