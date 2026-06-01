@@ -334,12 +334,10 @@ export function ErgoProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Ergo object not found");
     }
 
-    // Double check connection before proceeding
-    const isWalletConnected = await ergoConnector.nautilus.isConnected();
-    if (!isWalletConnected) {
-      throw new Error("Wallet not connected");
-    }
-
+    // Note: we intentionally do NOT call isConnected() here — Nautilus briefly
+    // returns false during its unlock flow (after the spending-password prompt),
+    // which caused a spurious "Wallet not connected" error even though the
+    // wallet was fully operational. window.ergo existing is sufficient.
     try {
       return await ergo.get_change_address();
     } catch (error) {
@@ -355,12 +353,8 @@ export function ErgoProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Ergo object not found");
     }
 
-    // Double check connection before proceeding
-    const isWalletConnected = await ergoConnector.nautilus.isConnected();
-    if (!isWalletConnected) {
-      throw new Error("Wallet not connected");
-    }
-
+    // Note: same reasoning as getChangeAddress — skip isConnected() to avoid
+    // the race condition where Nautilus returns false right after unlocking.
     try {
       // Get ERG balance
       const balance = (await ergo.get_balance("all")) as Array<{
