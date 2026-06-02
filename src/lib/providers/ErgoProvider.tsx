@@ -198,12 +198,23 @@ export function ErgoProvider({ children }: { children: React.ReactNode }) {
           const walletIsConnected = await wallet.isConnected();
           
           if (walletIsConnected && window.ergo) {
-            // Always update wallet state if window.ergo is available
+            // Wallet is fully connected — keep state in sync
             setIsConnected(true);
             setErgoWallet(window.ergo);
             setIsRestoringConnection(false);
-          } else if (!walletIsConnected) {
-            // Not connected - check if still authorized before disconnecting (Issue #51 fix)
+          } else if (!walletIsConnected && window.ergo) {
+            // isConnected() transiently returns false while Nautilus processes its
+            // spending-password unlock — but window.ergo is still live, so the
+            // wallet API is operational.  Do NOT disconnect here; just make sure
+            // our React state still reflects the live wallet object so that swap
+            // handlers can call sign_tx / submit_tx without hitting the
+            // "Wallet not connected" guard.
+            setIsConnected(true);
+            setErgoWallet(window.ergo);
+            setIsRestoringConnection(false);
+          } else if (!walletIsConnected && !window.ergo) {
+            // window.ergo is gone — the wallet is genuinely no longer available.
+            // Check authorization before giving up (Issue #51 fix).
             try {
               if (wallet.isAuthorized && typeof wallet.isAuthorized === 'function') {
                 const isAuthorized = await wallet.isAuthorized();
@@ -238,7 +249,7 @@ export function ErgoProvider({ children }: { children: React.ReactNode }) {
               console.log("isAuthorized() check failed in periodic check:", authError);
             }
             
-            // Only disconnect if not authorized or reconnect failed / API unavailable
+            // Truly disconnected and not authorized — clear state
             console.log("Wallet no longer connected and not authorized or reconnect failed, disconnecting...");
             setIsConnected(false);
             setErgoWallet(undefined);
