@@ -8,11 +8,11 @@
  * should import `getProtocolSdkConstants` / `createGluonInstance` from here
  * instead of hard-coding the Gold values.
  *
- * Node URL resolution (both protocols):
- *   Both Gold and Dollar respect NEXT_PUBLIC_NODE when set, and fall back to
- *   'https://node.sigmaspace.io/' otherwise. The SDK's built-in HTTP default
- *   ('http://213.239.193.208:9053/') is intentionally never used — it is blocked
- *   by browser mixed-content policy on HTTPS deployments.
+ * IMPORTANT — SDK quirk:
+ *   GLUON_GOLD.NFT_ID === ORACLE_POOL_NFT (misnamed in the SDK).
+ *   The actual Gluon box NFT for Gold is the flat `GLUON_NFT` export.
+ *   For Gold we therefore use `new sdk.Gluon()` with no arguments (SDK defaults
+ *   are already correct for Gold). Only Dollar needs a custom Config.
  */
 
 import { GLUON_GOLD, GLUON_DOLLAR } from 'gluon-ergo-sdk';
@@ -78,13 +78,15 @@ export const createGluonInstance = async () => {
   const sdk = await import('gluon-ergo-sdk');
 
   if (!isGluonDollar()) {
-    // Gold: use SDK defaults for all protocol constants (NFT IDs, trees, token IDs,
-    // oracle divisor=1000). Only override network and node URL so the SDK's built-in
-    // HTTP node ('http://213.239.193.208:9053/') is never used — it is blocked by
-    // browser mixed-content policy on HTTPS deployments.
+    // Gold: use SDK defaults completely unchanged — only override network/node
+    // when the env vars are explicitly set. This is identical to the original
+    // `new sdk.Gluon()` calls before we introduced this factory, so Gold
+    // behaviour is 100% preserved.
     const gluon = new sdk.Gluon();
     gluon.config.NETWORK = process.env.NEXT_PUBLIC_DEPLOYMENT ?? 'mainnet';
-    gluon.config.NODE_URL = process.env.NEXT_PUBLIC_NODE ?? 'https://node.sigmaspace.io/';
+    if (process.env.NEXT_PUBLIC_NODE) {
+      gluon.config.NODE_URL = process.env.NEXT_PUBLIC_NODE;
+    }
     return gluon;
   }
 
